@@ -1,0 +1,107 @@
+@(stream: Call, post: Call)(implicit request: RequestHeader)
+
+@main("Chat Server") {
+    <h1 style=" text-align:center; " >Welcome to chat application based in Play Framework for Scala</h1>
+    <div class="container">
+
+    </div>
+    <div class="container1">
+
+        <input id="msg" type="text" name="message" placeholder="Enter Your message and hit enter" />
+    </div>
+
+    @helper.form(action = routes.Application.upload, 'enctype -> "multipart/form-data") {
+
+        <div class="container1">
+            <h1> Upload a File</h1>
+            <input type="file" name="file">
+
+            <p>
+                <input type="submit">
+            </p>
+        </div>
+    }
+    @helper.form(action = routes.Application.download, 'enctype -> "multipart/form-data") {
+        <div class="container1">
+            <h1>Download a File</h1>
+            <p>
+                <input type="text" name="filename" placeholder="Filename with extension" />
+                <input type="submit" value="Download">
+            </p>
+        </div>
+    }
+
+
+    <script>
+            do{
+                var selection = parseInt(window.prompt("Please enter 1 for Public chat room and 2 for private chat!", ""), 10);
+            }while(isNaN(selection) &&( selection != 1 || selection !=2));
+
+            var user = $.cookie("user");
+            if(user == ""|| user==null)
+            {
+                while(user=="" || user==null){
+                    user = prompt("What should be your username?");
+                }
+
+            }
+            if(selection==1){
+                var topic=$.cookie("topic");
+
+                if(topic=="" || topic==null || topic== undefined)
+                {
+                    while(topic=="" || topic==null || topic < 1 || topic >3 || isNaN(topic)){
+                        topic=prompt("Select one of the following topics: \n1. US Politics \n2. Sports \n3.Technology\n(Enter the number)");
+                        if(topic==1) topicName="US Politics";
+                        else if(topic==2) topicName="Sports";
+                        else if(topic==3) topicName="Technology"
+                    }
+                }
+                $.cookie("topic", topic);
+            }
+            if(selection==2){
+                var user2 =$.cookie("user2", user2);//accessing cookies
+                if(user2 == ""||user2==null)
+                {
+                    while(user2=="" || user2==null){
+                        user2 = prompt("Whom do you wish to chat with?");
+                    }
+
+                }
+                $.cookie("user2", user2);
+
+            }
+            $.cookie("chat", selection);
+            $.cookie("user", user);//setting cookies
+
+
+            $("#msg" ).on("keyup", function(e){
+                if( e.keyCode != 13)
+                    return;
+                var m = { message: this.value, user: user, user2:user2, select:selection, topic: topic };
+                this.value = "";
+                $.ajax({
+                    url: "@post.toString()",
+                    data: JSON.stringify(m),
+                    method: "post",
+                    contentType: "application/json"
+                });
+            });
+
+            var feed = new EventSource("@stream.absoluteURL()");
+            feed.addEventListener("message", function (msg) {
+                var m = JSON.parse(msg.data);
+                if (m.user==user){
+                    $(".container" ).append("<div class='text-right'><p class='white-shadow'>" + m.user +":"+ m.message + "</p></div>");
+                }
+                else if ($.cookie("chat")==2 && m.select==2 && m.user2==user && m.user==user2 )
+                    $(".container" ).append("<div class='text-left'><p class='white-shadow'>"  + m.user+":" + m.message + "</p></div>");
+                else if ($.cookie("chat")==1 && m.select==1 && m.topic == topic)
+                    $(".container" ).append("<div class='text-left'><p class='white-shadow'>"  + m.user+":" + m.message + "</p></div>");
+                else if (m.user=="Chat-Buddy"){
+                    $(".container" ).append("<div class='text-left'><p class='white-shadow'>"  + m.user+":" + m.message +"</p></div>");
+                    if(topicName!="") $(".container" ).append("<div class='text-left'><p class='white-shadow'>"  + "This is chat room for following topic:" + topicName+"</p></div>");
+                }
+            }, false);
+    </script>
+}
